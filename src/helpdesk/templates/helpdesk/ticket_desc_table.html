@@ -75,6 +75,10 @@
         </p>
       </div>
       <div class="col">
+        <small class="text-uppercase text-secondary">{% translate "Age" %}</small>
+        <p>{{ ticket.created|elapsed_since }}</p>
+      </div>
+      <div class="col">
         <small class="text-uppercase text-secondary">{% translate "Priority" %}</small>
         <p>{{ ticket.get_priority_display }}</p>
       </div>
