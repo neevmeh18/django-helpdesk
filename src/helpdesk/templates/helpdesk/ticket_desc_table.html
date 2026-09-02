@@ -35,6 +35,13 @@
             {% endif %}
           </li>
           <li>
+            <a href="{% url 'helpdesk:print' ticket.id %}"
+               class="dropdown-item"
+               target="_blank">
+              <i class="fa-regular fa-file-lines me-2"></i>{% translate "Print" %}
+            </a>
+          </li>
+          <li>
             <hr class="dropdown-divider">
           </li>
           <li>
