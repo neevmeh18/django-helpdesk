@@ -417,7 +417,7 @@ QUEUE_EMAIL_BOX_UPDATE_ONLY = getattr(settings, "QUEUE_EMAIL_BOX_UPDATE_ONLY", F
 
 # only allow users to access queues that they are members of?
 HELPDESK_ENABLE_PER_QUEUE_STAFF_PERMISSION = getattr(
-    settings, "HELPDESK_ENABLE_PER_QUEUE_STAFF_PERMISSION", False
+    settings, "HELPDESK_ENABLE_PER_QUEUE_STAFF_PERMISSION", True
 )
 
 # use https in the email links
