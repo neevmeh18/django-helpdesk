@@ -245,3 +245,33 @@ table .tickettitle {
   float: none;
   display: block;
 }
+
+/* Public ticket page: at-a-glance status summary above the detail table */
+.public-ticket-status {
+  margin-bottom: 1.5rem;
+}
+
+.public-ticket-status .card {
+  margin-bottom: 0;
+}
+
+.public-ticket-status .pts-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.5rem;
+}
+
+.public-ticket-status .pts-cell {
+  min-width: 8rem;
+  flex: 1 1 8rem;
+}
+
+.public-ticket-status .pts-label {
+  color: #6c757d;
+  font-size: 0.8em;
+  margin-bottom: 0.25rem;
+}
+
+.public-ticket-status .pts-value {
+  font-weight: 500;
+}
