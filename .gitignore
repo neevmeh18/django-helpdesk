@@ -63,6 +63,3 @@ demodesk/db.sqlite3
 .vscode/
 .cursor/
 .devcontainer/
-
-standalone/
-standalone/*
