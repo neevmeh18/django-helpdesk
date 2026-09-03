@@ -1,0 +1,145 @@
+{% load i18n humanize static helpdesk_util ticket_to_link load_helpdesk_settings %}
+{% with request|load_helpdesk_settings as helpdesk_settings %}
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <meta charset="utf-8" />
+      <title>{{ ticket.queue.slug }}-{{ ticket.id }}</title>
+      {% if helpdesk_settings.HELPDESK_USE_CDN %}
+        <link rel="stylesheet"
+              href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+              integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+              crossorigin="anonymous" />
+      {% else %}
+        <link href="{% static 'helpdesk/vendor/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet" />
+      {% endif %}
+      <link href="{% static 'helpdesk/helpdesk-print.css' %}" rel="stylesheet" />
+    </head>
+    <body>
+      <div class="container my-4">
+        <h1>
+          {{ ticket.title }} <span class="badge rounded-pill text-bg-light">#{{ ticket.id }}</span>
+        </h1>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3 mb-4">
+          <div class="col">
+            <small class="text-uppercase text-secondary">{% translate "Queue" %}</small>
+            <p>{{ ticket.queue }}</p>
+          </div>
+          <div class="col">
+            <small class="text-uppercase text-secondary">{% translate "Status" %}</small>
+            <p>{{ ticket.get_status }}</p>
+          </div>
+          <div class="col">
+            <small class="text-uppercase text-secondary">{% translate "Priority" %}</small>
+            <p>{{ ticket.get_priority_display }}</p>
+          </div>
+          <div class="col">
+            <small class="text-uppercase text-secondary">{% translate "Assigned to" %}</small>
+            <p>{{ ticket.get_assigned_to }}</p>
+          </div>
+          <div class="col">
+            <small class="text-uppercase text-secondary">{% translate "Submitted by" %}</small>
+            <p>{{ ticket.submitter_email }}</p>
+          </div>
+          <div class="col">
+            <small class="text-uppercase text-secondary">{% translate "Created" %}</small>
+            <p>{{ ticket.created|date:"DATETIME_FORMAT" }}</p>
+          </div>
+          <div class="col">
+            <small class="text-uppercase text-secondary">{% translate "Age" %}</small>
+            <p>{{ ticket.created|elapsed_since }}</p>
+          </div>
+          <div class="col">
+            <small class="text-uppercase text-secondary">{% translate "Due Date" %}</small>
+            <p>{{ ticket.due_date|date:"DATETIME_FORMAT" }}</p>
+          </div>
+          {% if helpdesk_settings.HELPDESK_ENABLE_TIME_SPENT_ON_TICKET %}
+            <div class="col">
+              <small class="text-uppercase text-secondary">{% translate "Time spent" %}</small>
+              <p>{{ ticket.time_spent_formated }}</p>
+            </div>
+          {% endif %}
+        </div>
+        <h2>{% translate "Description" %}</h2>
+        {{ ticket.get_markdown|urlizetrunc:50|num_to_link }}
+        {% if ticket.resolution %}
+          <h2>{% translate "Resolution" %}</h2>
+          <p>{{ ticket.get_resolution_markdown|urlizetrunc:50|linebreaksbr }}</p>
+        {% endif %}
+        <h2>{% translate "History" %}</h2>
+        <div class="list-group list-group-flush my-3">
+          {% for followup in followups %}
+            <div class="list-group-item followup-item followup-item-{{ followup.direction }}">
+              <div class="d-flex align-items-center">
+                <h6 class="mb-0">{{ followup.title|escape|num_to_link }}</h6>
+                <span class="text-secondary ms-auto">
+                  {% if helpdesk_settings.HELPDESK_ENABLE_TIME_SPENT_ON_TICKET and followup.time_spent_formated %}
+                    <small>{{ followup.time_spent_formated }} ·</small>
+                  {% endif %}
+                  <span class="badge followup-item-badge">
+                    {% if followup.direction == 'internal' %}
+                      {% translate "Private" %}
+                    {% elif followup.direction == 'outbound' %}
+                      {% translate "To submitter" %}
+                    {% else %}
+                      {% translate "From submitter" %}
+                    {% endif %}
+                  </span>
+                </span>
+              </div>
+              <small class="text-secondary">
+                {{ followup.date|naturaltime }} {% if followup.user %}· {{ followup.user }}{% endif %}
+              </small>
+              {% if followup.email_recipients is not None %}
+                <small class="text-secondary d-block">
+                  {% if followup.email_recipients %}
+                    {% blocktranslate with recipients=followup.email_recipients|join:", " %}Emailed: {{ recipients }}{% endblocktranslate %}
+                  {% else %}
+                    {% translate "Emailed: no one" %}
+                  {% endif %}
+                </small>
+              {% endif %}
+              {% if followup.comment %}
+                <div class="mt-3">{{ followup.get_markdown|urlizetrunc:50|num_to_link }}</div>
+              {% endif %}
+              {% if followup.ticketchange_set.all %}
+                <ul class="list-unstyled mt-3">
+                  {% for change in followup.ticketchange_set.all %}
+                    <li>
+                      {% blocktranslate with change.field as field and change.old_value as old_value and change.new_value as new_value %}
+                                Changed {{ field }} from {{ old_value }} to {{ new_value }}.
+                            {% endblocktranslate %}
+                    </li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+              {% if followup.followupattachment_set.all %}
+                <h6 class="mt-3">{% translate "Attachments" %}</h6>
+                <ul>
+                  {% for attachment in followup.followupattachment_set.all %}
+                    <li>{{ attachment.filename }}</li>
+                  {% endfor %}
+                </ul>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <h2>{% translate "Attachments" %}</h2>
+        <ul>
+          {% for attachment in ticket_attachments %}
+            <li>
+              {{ attachment.filename }}
+              <small class="text-secondary">({{ attachment.size|filesizeformat }})</small>
+            </li>
+          {% empty %}
+            <li>{% translate "No attachments" %}</li>
+          {% endfor %}
+        </ul>
+        <footer class="mt-4">
+          <small class="text-secondary">{% translate "Printed" %}: {{ printed_at|date:"DATETIME_FORMAT" }}</small>
+        </footer>
+      </div>
+      <script>window.print();</script>
+    </body>
+  </html>
+{% endwith %}

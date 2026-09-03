@@ -590,6 +590,26 @@ def view_ticket(request, ticket_id):
 
 
 @helpdesk_staff_member_required
+def ticket_print(request, ticket_id):
+    """Render a printable summary of a ticket and its history."""
+    huser = HelpdeskUser(request.user)
+    ticket = get_object_or_404(huser.get_tickets_in_queues(), id=ticket_id)
+    return render(
+        request,
+        "helpdesk/ticket_print.html",
+        {
+            "ticket": ticket,
+            "followups": get_followups_for_ticket(ticket),
+            "ticket_attachments": get_attachments_for_ticket(ticket),
+            "printed_at": timezone.now(),
+        },
+    )
+
+
+ticket_print = staff_member_required(ticket_print)
+
+
+@helpdesk_staff_member_required
 def edit_ticket_checklist(request, ticket_id, checklist_id):
     ticket = get_object_or_404(Ticket, id=ticket_id)
     ticket_perm_check(request, ticket)
