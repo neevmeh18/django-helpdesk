@@ -1,0 +1,37 @@
+{% load i18n humanize %}
+{% load ticket_to_link %}
+<div class="followup public-followup card mb-3">
+  <div class="card-body">
+    <p class="public-followup__heading mb-2">
+      <strong>{{ followup.title }}</strong>
+      <span class="byline text-info">
+        {% if followup.user %}{% blocktrans with user=followup.user %}by {{ user }}{% endblocktrans %}{% endif %}
+        <span title="{{ followup.date|date:'DATETIME_FORMAT' }}">{{ followup.date|naturaltime }}</span>
+      </span>
+    </p>
+
+    <div class="public-followup__comment">
+      {{ followup.comment|force_escape|urlizetrunc:50|num_to_link|linebreaksbr }}
+    </div>
+
+    {% if followup.ticketchange_set.all %}
+      <div class="changes public-followup__changes mt-2">
+        <ul class="mb-0">
+          {% for change in followup.ticketchange_set.all %}
+            <li>{% blocktrans with field=change.field old_value=change.old_value new_value=change.new_value %}Changed {{ field }} from {{ old_value }} to {{ new_value }}.{% endblocktrans %}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if helpdesk_settings.HELPDESK_ENABLE_ATTACHMENTS and followup.followupattachment_set.all %}
+      <div class="attachments public-followup__attachments mt-2">
+        <ul class="list-group list-group-flush">
+          {% for attachment in followup.followupattachment_set.all %}
+            {% include "helpdesk/include/attachment_list_item.html" with public_timeline=True %}
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+  </div>
+</div>

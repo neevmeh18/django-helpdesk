@@ -263,6 +263,7 @@ class ViewTicket(TemplateView):
             "key": key,
             "mail": email,
             "ticket": ticket,
+            "followups": staff.get_followups_for_ticket(ticket),
             "helpdesk_settings": helpdesk_settings,
             "next": self.get_next_url(ticket_id),
         }
