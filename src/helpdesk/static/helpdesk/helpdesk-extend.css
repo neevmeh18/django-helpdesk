@@ -245,3 +245,19 @@ table .tickettitle {
   float: none;
   display: block;
 }
+
+/* Public ticket follow-up timeline */
+.public-followup__heading .byline {
+  font-weight: normal;
+  margin-left: 0.35rem;
+}
+
+.public-followup__comment,
+.public-followup__changes,
+.public-followup__attachments {
+  overflow-wrap: anywhere;
+}
+
+.public-followup__attachments .list-group-item:last-child {
+  border-bottom: 0;
+}
