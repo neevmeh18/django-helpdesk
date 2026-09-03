@@ -17,19 +17,20 @@ from django.core.exceptions import (
     ObjectDoesNotExist,
     PermissionDenied,
 )
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic.base import TemplateView
+from django.views.generic.base import TemplateView, View
 from django.views.generic.edit import FormView
 
 from helpdesk import settings as helpdesk_settings
 from helpdesk.decorators import is_helpdesk_staff, protect_view
 from helpdesk.lib import text_is_spam
 from helpdesk.models import Queue, Ticket, UserSettings
+from helpdesk.serializers import PublicTicketListingSerializer
 from helpdesk.user import huser_from_request
 from helpdesk.views import abstract_views, staff
 
@@ -277,6 +278,30 @@ class ViewTicket(TemplateView):
         elif helpdesk_settings.HELPDESK_NAVIGATION_ENABLED:
             redirect_url = reverse("helpdesk:view", args=[ticket_id])
         return redirect_url
+
+
+class PublicTicketStatusView(View):
+    """Return the current state of a ticket for the public ticket page."""
+
+    def get(self, request, *args, **kwargs):
+        ticket_req = request.GET.get("ticket", None)
+        email = request.GET.get("email", None)
+
+        if not (ticket_req and email):
+            return JsonResponse(
+                {"error": _("Missing ticket ID or e-mail address.")}, status=400
+            )
+
+        try:
+            _queue, ticket_id = Ticket.queue_and_id_from_query(ticket_req)
+            ticket = Ticket.objects.get(id=ticket_id, submitter_email__iexact=email)
+        except (ObjectDoesNotExist, ValueError):
+            return JsonResponse(
+                {"error": _("Invalid ticket ID or e-mail address.")}, status=404
+            )
+
+        ticket.set_custom_field_values()
+        return JsonResponse(PublicTicketListingSerializer(ticket).data)
 
 
 class MyTickets(TemplateView):

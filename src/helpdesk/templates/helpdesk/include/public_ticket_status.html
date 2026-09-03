@@ -1,5 +1,8 @@
 {% load i18n humanize %}
-<div class="public-ticket-status" id="public-ticket-status">
+<div class="public-ticket-status" id="public-ticket-status"
+     data-ticket="{{ ticket.ticket_for_url }}"
+     data-email="{{ mail }}"
+     data-status-url="{% url 'helpdesk:public_ticket_status' %}">
     <div class="card">
         <div class="card-body">
             <div class="pts-row">

@@ -175,6 +175,11 @@ if helpdesk_settings.HELPDESK_UI_ENABLED:
             name="success_iframe",
         ),
         path("view/", protect_view(public.ViewTicket.as_view()), name="public_view"),
+        path(
+            "view/status/",
+            protect_view(public.PublicTicketStatusView.as_view()),
+            name="public_ticket_status",
+        ),
         path("change_language/", public.change_language, name="public_change_language"),
     ]
     if helpdesk_settings.HELPDESK_KANBAN_ENABLED:
