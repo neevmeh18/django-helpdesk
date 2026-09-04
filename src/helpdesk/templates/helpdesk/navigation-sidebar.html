@@ -97,6 +97,12 @@
                 <span>{% trans "My Tickets" %}</span>
             </a>
         </li>
+        <li class="nav-item{% if 'shared' in request.path %} active{% endif %}">
+            <a class="nav-link" href="{% url 'helpdesk:shared-tickets' %}">
+                <i class="fas fa-fw fa-users"></i>
+                <span>{% trans "Shared with me" %}</span>
+            </a>
+        </li>
 
         {% endif %}
         {% if helpdesk_settings.HELPDESK_KB_ENABLED %}

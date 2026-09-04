@@ -18,7 +18,7 @@ from django.core.exceptions import (
     PermissionDenied,
 )
 from django.http import HttpResponseRedirect
-from django.shortcuts import render
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
 from django.utils.translation import gettext as _
 from django.views.decorators.clickjacking import xframe_options_exempt
@@ -28,6 +28,7 @@ from django.views.generic.edit import FormView
 
 from helpdesk import settings as helpdesk_settings
 from helpdesk.decorators import is_helpdesk_staff, protect_view
+from helpdesk.forms import CollaboratorReplyForm
 from helpdesk.lib import text_is_spam
 from helpdesk.models import Queue, Ticket, UserSettings
 from helpdesk.user import huser_from_request
@@ -288,6 +289,80 @@ class MyTickets(TemplateView):
 
         context = self.get_context_data(**kwargs)
         return self.render_to_response(context)
+
+
+def collaborator_tickets(user):
+    """Tickets the user has been copied in on."""
+    return Ticket.objects.filter(
+        ticketcc__user=user, ticketcc__can_view=True
+    ).distinct()
+
+
+class SharedWithMe(TemplateView):
+    template_name = "helpdesk/shared_tickets.html"
+
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return HttpResponseRedirect(reverse("helpdesk:login"))
+
+        context = self.get_context_data(**kwargs)
+        context["tickets"] = (
+            collaborator_tickets(request.user)
+            .select_related("queue")
+            .order_by("-modified")
+        )
+        return self.render_to_response(context)
+
+
+class CollaboratorTicketView(TemplateView):
+    template_name = "helpdesk/collaborator_ticket.html"
+
+    def get(self, request, ticket_id, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return HttpResponseRedirect(reverse("helpdesk:login"))
+
+        ticket = get_object_or_404(collaborator_tickets(request.user), id=ticket_id)
+        context = {
+            "ticket": ticket,
+            "followups": ticket.followup_set.public_followups().order_by("date"),
+            "form": CollaboratorReplyForm(),
+        }
+        return self.render_to_response(context)
+
+    def post(self, request, ticket_id, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return HttpResponseRedirect(reverse("helpdesk:login"))
+
+        ticket = get_object_or_404(collaborator_tickets(request.user), id=ticket_id)
+        form = CollaboratorReplyForm(request.POST)
+        if not form.is_valid():
+            context = {
+                "ticket": ticket,
+                "followups": ticket.followup_set.public_followups().order_by("date"),
+                "form": form,
+            }
+            return self.render_to_response(context)
+
+        from helpdesk.update_ticket import update_ticket
+
+        new_status = None
+        if form.cleaned_data["reopen"] and ticket.status in (
+            Ticket.RESOLVED_STATUS,
+            Ticket.CLOSED_STATUS,
+        ):
+            new_status = Ticket.REOPENED_STATUS
+
+        update_ticket(
+            request.user,
+            ticket,
+            comment=form.cleaned_data["comment"],
+            public=True,
+            new_status=new_status,
+        )
+
+        return HttpResponseRedirect(
+            reverse("helpdesk:collaborator-ticket", args=[ticket.id])
+        )
 
 
 def change_language(request):
