@@ -290,6 +290,29 @@ class MyTickets(TemplateView):
         return self.render_to_response(context)
 
 
+def collaborator_tickets(user):
+    """Tickets the user has been copied in on."""
+    return Ticket.objects.filter(
+        ticketcc__user=user, ticketcc__can_view=True
+    ).distinct()
+
+
+class SharedWithMe(TemplateView):
+    template_name = "helpdesk/shared_tickets.html"
+
+    def get(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return HttpResponseRedirect(reverse("helpdesk:login"))
+
+        context = self.get_context_data(**kwargs)
+        context["tickets"] = (
+            collaborator_tickets(request.user)
+            .select_related("queue")
+            .order_by("-modified")
+        )
+        return self.render_to_response(context)
+
+
 def change_language(request):
     return_to = ""
     if "return_to" in request.GET:

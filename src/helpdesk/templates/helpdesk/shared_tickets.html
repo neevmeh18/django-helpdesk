@@ -1,0 +1,33 @@
+{% extends "helpdesk/public_base.html" %}{% load i18n humanize %}
+
+{% block helpdesk_body %}
+<h2>{% trans "Shared with me" %}</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>{% trans "Ticket" %}</th>
+            <th>{% trans "Title" %}</th>
+            <th>{% trans "Queue" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Last updated" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ticket in tickets %}
+        <tr>
+            <td><a href="{% url 'helpdesk:collaborator-ticket' ticket.id %}">{{ ticket.ticket }}</a></td>
+            <td>{{ ticket.title }}</td>
+            <td>{{ ticket.queue }}</td>
+            <td>{{ ticket.get_status_display }}</td>
+            <td>{{ ticket.modified|naturaltime }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5">{% trans "You have not been copied in on any tickets." %}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
