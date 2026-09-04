@@ -164,6 +164,11 @@ if helpdesk_settings.HELPDESK_UI_ENABLED:
             name="my-tickets",
         ),
         path("tickets/shared/", protect_view(public.SharedWithMe.as_view()), name="shared-tickets"),
+        path(
+            "tickets/shared/<int:ticket_id>/",
+            protect_view(public.CollaboratorTicketView.as_view()),
+            name="collaborator-ticket",
+        ),
         path("tickets/submit/", public.create_ticket, name="submit"),
         path(
             "tickets/submit_iframe/",

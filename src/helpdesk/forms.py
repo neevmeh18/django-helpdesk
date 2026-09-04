@@ -694,6 +694,19 @@ class TicketCCEmailForm(forms.ModelForm):
         )
 
 
+class CollaboratorReplyForm(forms.Form):
+    comment = forms.CharField(
+        widget=forms.Textarea(attrs={"rows": 5, "class": "form-control"}),
+        required=True,
+        label=_("Your reply"),
+    )
+    reopen = forms.BooleanField(
+        required=False,
+        label=_("Reopen this ticket"),
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
+
+
 class TicketDependencyForm(forms.ModelForm):
     """Adds a different ticket as a dependency for this Ticket"""
 
