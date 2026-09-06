@@ -2,6 +2,7 @@ from datetime import datetime
 from django.conf import settings
 from django.template import Library
 from django.template.defaultfilters import date as date_filter
+from django.utils import timezone
 from helpdesk.settings import (
     CUSTOMFIELD_DATE_FORMAT,
     CUSTOMFIELD_DATETIME_FORMAT,
@@ -44,3 +45,26 @@ def datetime_string_format(value):
                 # If NoneType return empty string, else return original value
                 new_value = "" if value is None else value
     return new_value
+
+
+@register.filter
+def elapsed_since(value):
+    """Return a compact day-aware duration from value to now, or "" if None."""
+    if value is None:
+        return ""
+    now = timezone.now()
+    if timezone.is_aware(now) and timezone.is_naive(value):
+        value = timezone.make_aware(value, timezone.get_current_timezone())
+    elif timezone.is_naive(now) and timezone.is_aware(value):
+        value = timezone.make_naive(value, timezone.get_current_timezone())
+    total_seconds = int((now - value).total_seconds())
+    if total_seconds < 0:
+        total_seconds = 0
+    days, remainder = divmod(total_seconds, 86400)
+    hours, remainder = divmod(remainder, 3600)
+    minutes, _ = divmod(remainder, 60)
+    if days:
+        return f"{days}d {hours:02d}h {minutes:02d}m"
+    if hours:
+        return f"{hours:02d}h {minutes:02d}m"
+    return f"{minutes}m"
