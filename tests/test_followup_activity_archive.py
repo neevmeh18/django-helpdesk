@@ -4,9 +4,17 @@ import json
 
 from cryptography.fernet import Fernet
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
-from helpdesk.models import FollowUp, FollowUpActivity, Queue, Ticket
+from helpdesk.models import (
+    CustomField,
+    FollowUp,
+    FollowUpActivity,
+    FollowUpAttachment,
+    Queue,
+    Ticket,
+)
 
 from .helpers import get_user
 
@@ -14,11 +22,15 @@ from .helpers import get_user
 class FollowUpActivityArchiveTests(TestCase):
     def setUp(self):
         self.user = get_user(username="activity-user", is_staff=True)
+        self.owner = get_user(username="ticket-owner", is_staff=True)
         self.queue = Queue.objects.create(title="Activity", slug="activity")
         self.ticket = Ticket.objects.create(
             title="Archive test",
             submitter_email="archive@example.com",
             queue=self.queue,
+            assigned_to=self.owner,
+            description="Internal ticket description",
+            resolution="Internal ticket resolution",
         )
 
     def _decrypt(self, record):
@@ -75,6 +87,58 @@ class FollowUpActivityArchiveTests(TestCase):
         self.assertEqual(records[1].event, FollowUpActivity.EVENT_UPDATED)
         self.assertEqual(self._decrypt(records[1])["comment"], "After comment")
 
+    def test_archive_includes_related_ticket_context(self):
+        custom_field = CustomField.objects.create(
+            name="account_reference",
+            label="Account reference",
+            data_type="varchar",
+            staff_only=True,
+        )
+        self.ticket.ticketcustomfieldvalue_set.create(
+            field=custom_field, value="REF-2048"
+        )
+        followup = FollowUp.objects.create(
+            ticket=self.ticket,
+            title="Internal note",
+            comment="Private troubleshooting details",
+            public=False,
+            user=self.user,
+        )
+        FollowUpAttachment.objects.create(
+            followup=followup,
+            file=SimpleUploadedFile("diagnostic.txt", b"diagnostic output"),
+            filename="diagnostic.txt",
+            mime_type="text/plain",
+            size=17,
+        )
+
+        # Save once more so the snapshot captures the newly attached file.
+        followup.save()
+
+        record = FollowUpActivity.objects.filter(followup=followup).latest("id")
+        snapshot = self._decrypt(record)
+
+        self.assertEqual(snapshot["comment"], "Private troubleshooting details")
+        self.assertEqual(snapshot["author"]["id"], self.user.id)
+        self.assertEqual(snapshot["author"]["username"], self.user.get_username())
+        self.assertEqual(snapshot["ticket"]["id"], self.ticket.id)
+        self.assertEqual(snapshot["ticket"]["submitter_email"], "archive@example.com")
+        self.assertEqual(snapshot["ticket"]["assigned_to"]["id"], self.owner.id)
+        self.assertNotIn("secret_key", snapshot["ticket"])
+        self.assertEqual(
+            snapshot["ticket"]["assigned_to"]["username"],
+            self.owner.get_username(),
+        )
+        self.assertEqual(
+            snapshot["ticket"]["description"], "Internal ticket description"
+        )
+        self.assertEqual(
+            snapshot["ticket"]["resolution"], "Internal ticket resolution"
+        )
+        self.assertEqual(snapshot["attachments"][0]["filename"], "diagnostic.txt")
+        self.assertEqual(snapshot["custom_fields"][0]["name"], "account_reference")
+        self.assertTrue(snapshot["custom_fields"][0]["staff_only"])
+        self.assertEqual(snapshot["custom_fields"][0]["value"], "REF-2048")
 
     def test_activity_record_survives_followup_deletion(self):
         followup = FollowUp.objects.create(
