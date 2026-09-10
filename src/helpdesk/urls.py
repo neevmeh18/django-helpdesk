@@ -69,6 +69,11 @@ if helpdesk_settings.HELPDESK_UI_ENABLED:
             name="followup_edit",
         ),
         path(
+            "tickets/<int:ticket_id>/followup/<int:followup_id>/activity/",
+            staff.followup_activity,
+            name="followup_activity",
+        ),
+        path(
             "tickets/<int:ticket_id>/followup_delete/<int:followup_id>/",
             staff.followup_delete,
             name="followup_delete",

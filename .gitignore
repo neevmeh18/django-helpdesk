@@ -64,6 +64,7 @@ demodesk/db.sqlite3
 .cursor/
 .devcontainer/
 
+followup-activity-viewer.patch
 scenarios.txt
 standalone/static/
-standalone/
+

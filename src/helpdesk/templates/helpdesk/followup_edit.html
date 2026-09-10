@@ -7,6 +7,45 @@
         document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
             new bootstrap.Tooltip(el);
         });
+
+        const activityPanel = document.getElementById('followup-activity');
+        if (!activityPanel) {
+            return;
+        }
+
+        fetch(activityPanel.dataset.activityUrl, {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('Unable to load activity');
+                }
+                return response.json();
+            })
+            .then(function(activity) {
+                const values = {
+                    event: activity.event || '',
+                    recorded_at: activity.recorded_at || activity.date || '',
+                    title: activity.title || '',
+                    public: activity.public ? 'Yes' : 'No',
+                    new_status: activity.new_status == null ? '' : activity.new_status,
+                    time_spent: activity.time_spent || ''
+                };
+
+                Object.keys(values).forEach(function(name) {
+                    const target = activityPanel.querySelector('[data-activity-field="' + name + '"]');
+                    if (target) {
+                        target.textContent = values[name];
+                    }
+                });
+
+                activityPanel.querySelector('.activity-loading').classList.add('d-none');
+                activityPanel.querySelector('.activity-content').classList.remove('d-none');
+            })
+            .catch(function() {
+                activityPanel.querySelector('.activity-loading').textContent = 'Activity details are unavailable.';
+            });
     });
 </script>
 {% endblock helpdesk_head %}
@@ -26,6 +65,31 @@
 {% block helpdesk_body %}
 
 {% include "helpdesk/ticket_desc_table.html" %}
+
+<div class="card mb-3" id="followup-activity" data-activity-url="{% url 'helpdesk:followup_activity' ticket.id followup.id %}">
+    <div class="card-header">
+        {% trans "Activity Details" %}
+    </div>
+    <div class="card-body">
+        <p class="activity-loading mb-0">{% trans "Loading activity details..." %}</p>
+        <dl class="activity-content row mb-0 d-none">
+            <dt class="col-sm-3">{% trans "Event" %}</dt>
+            <dd class="col-sm-9" data-activity-field="event"></dd>
+            <dt class="col-sm-3">{% trans "Recorded" %}</dt>
+            <dd class="col-sm-9" data-activity-field="recorded_at"></dd>
+            <dt class="col-sm-3">{% trans "Title" %}</dt>
+            <dd class="col-sm-9" data-activity-field="title"></dd>
+            <dt class="col-sm-3">{% trans "Public" %}</dt>
+            <dd class="col-sm-9" data-activity-field="public"></dd>
+            <dt class="col-sm-3">{% trans "Status" %}</dt>
+            <dd class="col-sm-9" data-activity-field="new_status"></dd>
+            {% if helpdesk_settings.HELPDESK_ENABLE_TIME_SPENT_ON_TICKET %}
+            <dt class="col-sm-3">{% trans "Time spent" %}</dt>
+            <dd class="col-sm-9" data-activity-field="time_spent"></dd>
+            {% endif %}
+        </dl>
+    </div>
+</div>
 
 <div class="card mb-3">
     <div class="card-header">
