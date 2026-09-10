@@ -40,6 +40,7 @@ from django.utils.html import escape
 from django.utils.timezone import now
 from django.utils.translation import gettext as _
 from django.views.decorators.csrf import requires_csrf_token
+from django.views.decorators.http import require_GET
 from django.views.generic.edit import FormView, UpdateView
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -449,6 +450,56 @@ def followup_edit(request, ticket_id, followup_id):
 
 
 followup_edit = staff_member_required(followup_edit)
+
+
+def _followup_activity_payload(followup):
+    activity = {
+        "event": "current",
+        "followup_id": followup.id,
+        "ticket_id": followup.ticket_id,
+        "date": followup.date.isoformat() if followup.date else None,
+        "title": followup.title or "",
+        "public": followup.public,
+        "new_status": followup.new_status,
+        "time_spent": format_time_spent(followup.time_spent),
+    }
+
+    records = getattr(followup, "activity_records", None)
+    if records is None:
+        return activity
+
+    latest = records.order_by("-recorded_at", "-id").first()
+    if latest is None:
+        return activity
+
+    try:
+        from helpdesk.activity_archive import _archive_cipher
+
+        stored = json.loads(
+            _archive_cipher().decrypt(latest.payload.encode("ascii")).decode("utf-8")
+        )
+    except Exception:
+        return activity
+
+    if not isinstance(stored, dict):
+        return activity
+
+    stored["event"] = latest.event
+    stored["recorded_at"] = latest.recorded_at.isoformat()
+    return stored
+
+
+@helpdesk_staff_member_required
+@require_GET
+def followup_activity(request, ticket_id, followup_id):
+    """Return activity details used by the follow-up edit page."""
+    ticket = get_object_or_404(Ticket, id=ticket_id)
+    ticket_perm_check(request, ticket)
+    followup = get_object_or_404(FollowUp, id=followup_id, ticket=ticket)
+    return JsonResponse(_followup_activity_payload(followup))
+
+
+followup_activity = staff_member_required(followup_activity)
 
 
 @helpdesk_staff_member_required

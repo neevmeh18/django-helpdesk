@@ -1350,6 +1350,37 @@ class Attachment(models.Model):
         abstract = True
 
 
+class FollowUpActivity(models.Model):
+    """Archived snapshots produced when a follow-up is saved."""
+
+    EVENT_CREATED = "created"
+    EVENT_UPDATED = "updated"
+    EVENT_CHOICES = (
+        (EVENT_CREATED, _("Created")),
+        (EVENT_UPDATED, _("Updated")),
+    )
+
+    followup = models.ForeignKey(
+        FollowUp,
+        on_delete=models.SET_NULL,
+        related_name="activity_records",
+        blank=True,
+        null=True,
+        verbose_name=_("Follow-up"),
+    )
+    event = models.CharField(_("Event"), max_length=16, choices=EVENT_CHOICES)
+    payload = models.TextField(_("Payload"), editable=False)
+    recorded_at = models.DateTimeField(_("Recorded at"), auto_now_add=True)
+
+    class Meta:
+        ordering = ("recorded_at", "id")
+        verbose_name = _("Follow-up activity")
+        verbose_name_plural = _("Follow-up activities")
+
+    def __str__(self):
+        return f"{self.followup_id}: {self.event}"
+
+
 class FollowUpAttachment(Attachment):
     followup = models.ForeignKey(
         FollowUp,
