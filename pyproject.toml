@@ -32,6 +32,7 @@ dependencies = [
     "oauthlib",
     "requests-oauthlib",
     "requests",
+    "cryptography>=42",
 ]
 
 classifiers = [

@@ -63,3 +63,7 @@ demodesk/db.sqlite3
 .vscode/
 .cursor/
 .devcontainer/
+
+scenarios.txt
+standalone/static/
+standalone/
